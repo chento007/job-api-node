@@ -23,21 +23,21 @@ const jobSchema = new mongoose.Schema({
         type : String,
         required : [true, 'Please add an address.']
     },
-    location :{
-        type : {
-            type : String,
-            enum : ['Point']
-        },
-        coordinates : {
-            type : [Number],
-            index : '2dsphere'
-        },
-        formattedAddress : String,
-        city : String,
-        state : String,
-        zipcode : String,
-        country : String
-    },
+    // location :{
+    //     type : {
+    //         type : String,
+    //         enum : ['Point']
+    //     },
+    //     coordinates : {
+    //         type : [Number],
+    //         index : '2dsphere'
+    //     },
+    //     formattedAddress : String,
+    //     city : String,
+    //     state : String,
+    //     zipcode : String,
+    //     country : String
+    // },
     company : {
         type : String,
         required : [true, 'Please add Company name.']
@@ -115,5 +115,13 @@ const jobSchema = new mongoose.Schema({
         select : false
     },
 });
+
+// creating job slug before saving
+jobSchema.pre("save",function(next){
+
+    this.slug = slugify(this.title,{lower:true})
+    next();
+
+})
 
 module.exports = mongoose.model("Job", jobSchema)
