@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const authorizeRole = require("../controllers/auth.controller")
 
 const {
     getJobs,
@@ -10,15 +11,17 @@ const {
     getJobStat
 } = require("../controllers/job.controller")
 
-router.route("/jobs")
+const {isAuthenicationedUser,authorizeRoles} =require("../middlewares/auth")
+
+router.route("")
     .get(getJobs)
-    .post(createNewJob)
+    .post(isAuthenicationedUser,createNewJob,authorizeRoles("employee"))
 router.route("/stats/:topic")
     .get(getJobStat)
-router.route("/jobs/:id")
+router.route("/:id")
     .put(updateJob)
     .delete(deleteJob)
-router.route("/jobs/:id/:slug")
+router.route("/:id/:slug")
     .get(getJobByIdAndSlug)
 
 module.exports = router

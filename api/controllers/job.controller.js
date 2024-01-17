@@ -1,38 +1,47 @@
 const Job = require("../models/jobs")
+const ErrorHandler = require("../exceptions/ErrorHandler")
+const catchAsyncErros = require("../middlewares/catchAsyncErrors")
+const APIFilters = require("../utils/APIFilters")
 
-const getJobs = async (req, res, next) => {
+const getJobs = catchAsyncErros(async (req, res, next) => {
 
-    const jobs = await Job.find();
+    const apifilters = new APIFilters(Job.find(), req.query)
+        .filter()
+        .sort()
+        .limitFields()
+        .searchByQuery()
+        .pagination()
+
+    const jobs = await apifilters.query;
 
     res.json({
         success: true,
         message: "Job successfully found.",
         data: jobs
     })
-}
+})
 
 
-const createNewJob = async (req, res, next) => {
+const createNewJob = catchAsyncErros(async (req, res, next) => {
 
     const job = await Job.create(req.body)
 
-    res.json({
+    res.status(200).json({
         success: true,
         message: "Job successfully created",
         data: job
     })
-}
+})
 
-const updateJob = async (req, res, next) => {
+const updateJob = catchAsyncErros(async (req, res, next) => {
 
     const id = req.params.id;
     let job = await Job.findById(id)
 
     if (!job && job.length === 0) {
-        return res.status(404).json({
-            success: false,
-            message: "Job not found"
-        })
+        return next(
+            new ErrorHandler("Job not found", 404)
+        )
     }
 
     job = await Job.findByIdAndUpdate(id, req.body, {
@@ -47,18 +56,17 @@ const updateJob = async (req, res, next) => {
         data: job
     })
 
-}
+})
 
-const deleteJob = async (req, res, next) => {
+const deleteJob = catchAsyncErros(async (req, res, next) => {
 
     const id = req.params.id;
     let job = await Job.findById(id);
 
     if (!job) {
-        return res.status(404).json({
-            success: false,
-            message: "Job not found."
-        })
+        return next(
+            new ErrorHandler("Job not found", 404)
+        )
     }
 
     job = await Job.findByIdAndDelete(id)
@@ -68,9 +76,9 @@ const deleteJob = async (req, res, next) => {
         message: "Job has been deleted"
     })
 
-}
+})
 
-const getJobByIdAndSlug = async (req, res, next) => {
+const getJobByIdAndSlug = catchAsyncErros(async (req, res, next) => {
 
     const id = req.params.id;
     const slug = req.params.slug;
@@ -84,10 +92,9 @@ const getJobByIdAndSlug = async (req, res, next) => {
 
 
     if (!job || job.length === 0) {
-        return res.json({
-            success: false,
-            message: "Job not found"
-        })
+        return next(
+            new ErrorHandler("Job not found", 404)
+        )
     }
 
     return res.status(200).json({
@@ -96,48 +103,36 @@ const getJobByIdAndSlug = async (req, res, next) => {
         data: job
     })
 
-}
+})
 
-const getJobStat = async (req, res, next) => {
+const getJobStat = catchAsyncErros(async (req, res, next) => {
 
-    // const stats = await Job.aggregate([
-    //     {
-    //         // $match: { $text: { $search: "\"" + req.params.topic + "\"" } }
-    //         $match: { $text: { $search: "\"" + req.params.topic + "\"" } }
-
-    //     },
-    //     {
-    //         $group: {
-    //             _id: null,
-    //             avgSalary: { $avg: "$salary" }
-    //         }
-    //     }
-    // ])
     const stats = await Job.aggregate([
         {
-            $match: { $text: { $search: req.params.topic  } }
+            $match: { title: req.params.topic }
         },
         {
             $group: {
-                _id : null,
-                avgSalary: { $avg: '$salary' },
-                minSalary: { $min: '$salary' },
-                maxSalary: { $max: '$salary' }
+                _id: null,
+                avgSalary: { $avg: "$salary" },
+                minSalary: { $min: "$salary" },
+                maxSalary: { $max: "$salary" },
             }
         }
     ]);
+
     if (stats.length === 0) {
-        return res.status(404).json({
-            success: false,
-            message: "No statistic found."
-        })
+        return next(
+            new ErrorHandler("Topic not found", 404)
+        )
     }
 
     return res.status(200).json({
         success: true,
         data: stats
     })
-}
+})
+
 
 module.exports = {
     getJobs,
