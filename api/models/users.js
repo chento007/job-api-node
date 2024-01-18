@@ -36,6 +36,9 @@ const userSchema = new mongoose.Schema({
     },
     resetPasswordToken: String,
     resetPasswordExpire: Date
+}, {
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
 })
 
 userSchema.pre("save", async function (next) {
@@ -47,9 +50,12 @@ userSchema.pre("save", async function (next) {
 })
 
 userSchema.methods.getJwtToken = function () {
-    return jwt.sign({ id: this._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_TIME })
+    return jwt.sign({ id: this._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRES_TIME })
 }
 
+userSchema.methods.getJwtRefreshToken = function () {
+    return jwt.sign({ id: this._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_REFRESH_TOKEN_EXPIRES_TIME })
+}
 userSchema.methods.comparePassword = async function (passwordEnter) {
     return await bcrypt.compare(passwordEnter, this.password);
 }
@@ -66,6 +72,13 @@ userSchema.methods.getResetPasswordToken = function () {
     this.resetPasswordExpire = Date.now() + 30 * 60 * 1000;
     return resetToken;
 }
+
+userSchema.virtual("jobPublished", {
+    ref: "Job",
+    localField: "_id",
+    foreignField: "user",
+    justOne: false
+})
 
 const USER = mongoose.model("User", userSchema);
 USER.createIndexes();

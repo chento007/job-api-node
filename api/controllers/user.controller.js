@@ -7,7 +7,10 @@ const crypto = require('crypto');
 
 const getUerProfile = catchAsyncErrors(async (req, res, next) => {
 
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).populate({
+        path : "jobPublished",
+        select : "title postingDate"
+    });
 
     res.status(200).json({
         success: true,

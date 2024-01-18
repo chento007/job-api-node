@@ -1,9 +1,16 @@
-const express = require('express')
-const devenv = require("dotenv")
-const cookieParser = require("cookie-parser")
+const express = require('express');
+const fileUpload = require("express-fileupload");
+const rateLimit = require("express-rate-limit");
+var cors = require('cors')
+const helmet = require("helmet");
+const mongoSanitize = require("express-mongo-sanitize")
+const hpp = require("hpp")
+
+const devenv = require("dotenv");
+const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
-const errorMiddleware = require("./api/middlewares/errors")
 const app = express()
+const errorMiddleware = require("./api/middlewares/errors")
 const connectDatabase = require("./api/config/database")
 const ErrorHandler = require("./api/exceptions/ErrorHandler")
 devenv.config({ path: "./api/config/config.env" })
@@ -13,13 +20,34 @@ process.on("uncaughtException", err => {
     console.log("ERROR: ", err.message)
     process.exit(1);
 })
+app.use(cors())
+
 
 connectDatabase();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use(cookieParser());
+app.use(helmet());
+
 app.use(express.json())
+
+app.use(cookieParser());
+
+app.use(fileUpload());
+
+app.use(mongoSanitize())
+
+app.use(hpp({
+    whitelist : ["positions"]
+}))
+
+const limiter = rateLimit({
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
+
+});
+
+app.use(limiter)
 
 const jobs = require("./api/routes/job.routes")
 const auth = require("./api/routes/auth.routes")

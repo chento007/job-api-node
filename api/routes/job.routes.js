@@ -7,14 +7,18 @@ const {
     updateJob,
     deleteJob,
     getJobByIdAndSlug,
-    getJobStat
+    getJobStat,
+    applyJob
 } = require("../controllers/job.controller")
 
 const { isAuthenicationedUser, authorizeRoles } = require("../middlewares/auth")
 
+router.route("/:id/apply")
+    .put(isAuthenicationedUser, authorizeRoles("user"), applyJob)
+
 router.route("")
-    .get(getJobs)
-    .post(isAuthenicationedUser, createNewJob, authorizeRoles("employee"))
+    .get(isAuthenicationedUser,getJobs)
+    .post(isAuthenicationedUser, authorizeRoles("employee"), createNewJob)
 
 router.route("/stats/:topic")
     .get(getJobStat)

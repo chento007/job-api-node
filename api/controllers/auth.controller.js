@@ -4,6 +4,7 @@ const catchAsyncErrors = require("../middlewares/catchAsyncErrors")
 const sendToken = require("../utils/jwtToken");
 const sendMail = require("../utils/sendEmail");
 const crypto = require('crypto');
+const jwt = require("jsonwebtoken");
 
 
 const register = catchAsyncErrors(async (req, res, next) => {
@@ -58,6 +59,7 @@ const forgotPassword = catchAsyncErrors(async (req, res, next) => {
 
     const message = `Your password reset link is as follow:\n\n ${resetUrl}
     \n\n If you have not request this, then please ignore that.`;
+
     try {
         await sendMail({
             email: user.email,
@@ -75,15 +77,15 @@ const forgotPassword = catchAsyncErrors(async (req, res, next) => {
         user.resetPasswordToken = undefined;
 
         await user.save({ validateBeforeSave: false })
-        return next(
-            new ErrorHandler(`Email is not sent.`, 500)
-        )
+
+        return next(new ErrorHandler(`Email is not sent.`, 500))
     }
 
 })
 
 // reset password
 const resetPassword = catchAsyncErrors(async (req, res, next) => {
+    
     const resetPasswordToken = crypto
         .createHash("sha256")
         .update(req.params.token)
@@ -120,9 +122,29 @@ const logout = catchAsyncErrors(async (req, res, next) => {
         message: "Logged out successfully."
     })
 })
+
+const refreshToken = catchAsyncErrors(async (req, res, next) => {
+
+    const refreshToken = req.body.refreshToken;
+
+    if (!refreshToken) {
+        return next(new ErrorHandler("Access Denied. No refresh token provided.", 401));
+    }
+
+    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+        return next(new ErrorHandler("Something whend wrong.", 401));
+    }
+
+    sendToken(user, 200, res, req);
+})
+
 module.exports = {
     register,
     login,
+    refreshToken,
     logout,
     forgotPassword,
     resetPassword
